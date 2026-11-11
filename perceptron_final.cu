@@ -210,7 +210,7 @@ uint32_t leerEntero(ifstream& archivo) {
 // ============================================================
 
 void cargarSet(
-    const string& rutaImagenes, const string& rutaEtiquetas, vector<DatoImagen>& destino) 
+    const string& rutaImagenes, const string& rutaEtiquetas, vector<DatoImagen>& destino)
 {
     ifstream imagenes(rutaImagenes, ios::binary);
     ifstream etiquetas(rutaEtiquetas, ios::binary);
@@ -272,10 +272,10 @@ void cargarMNIST(
     vector<DatoImagen>& prueba
 ) {
     // ENTRENAMIENTO: datos para aprender.
-    cargarSet(rutaArchivos + "/train-images.idx3-ubyte", rutaArchivos + "/train-labels.idx1-ubyte", entrenamiento);
+    cargarSet(rutaArchivos + "/train-images-idx3-ubyte", rutaArchivos + "/train-labels-idx1-ubyte", entrenamiento);
 
     // PRUEBA: datos que NO participan en el aprendizaje.
-    cargarSet(rutaArchivos + "/t10k-images.idx3-ubyte", rutaArchivos + "/t10k-labels.idx1-ubyte", prueba);
+    cargarSet(rutaArchivos + "/t10k-images-idx3-ubyte", rutaArchivos + "/t10k-labels-idx1-ubyte", prueba);
 }
 
 // 11. NORMALIZAR PIXELES Y AGREGAR BIAS
@@ -291,7 +291,7 @@ void norma_img(const int* fuente, float* destino) {
 // NO MODIFICA PESOS.
 
 
-void evaluar(const vector<DatoImagen>& datos, const string& nombre) 
+void evaluar(const vector<DatoImagen>& datos, const string& nombre)
 {
     vector<float> buffer(entradas);
 
@@ -355,7 +355,7 @@ int main() {
 
         cout << "\n========== ENTRENAMIENTO ==========\n";
 
-        for (int e = 1; e <= epochs; e++) 
+        for (int e = 1; e <= epochs; e++)
         {
             int errores = 0;
 
@@ -399,8 +399,8 @@ int main() {
         liberarPerceptron();
 
         return 0;
-    } 
-    catch (const exception& e) 
+    }
+    catch (const exception& e)
     {
         cerr << "Error: " << e.what() << '\n';
         liberarPerceptron();
