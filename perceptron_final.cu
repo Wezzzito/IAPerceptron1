@@ -11,7 +11,7 @@ using namespace std;
 const int tam_imagen = 784;
 const int entradas = 785; // 784 pixeles + bias
 const int grupos = 10;   // 10 salidas, una por digito
-const int epochs = 10;
+const int epochs = 100;
 
 const float lr = 0.1f;
 
