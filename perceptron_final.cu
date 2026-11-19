@@ -28,7 +28,7 @@ void revisar(cudaError_t estado) {
         throw runtime_error(cudaGetErrorString(estado));
 }
 
-// 1. PRODUCTO PUNTO DEL PERCEPTRON
+// PRODUCTO PUNTO DEL PERCEPTRON
 // u = w[0]*X[0] + w[1]*X[1] + ... + w[784]*X[784]
 
 
@@ -53,7 +53,7 @@ __global__ void kernelForward(const float* W, const float* X, float* u) {
     }
 }
 
-// 2. ACTIVACION ESCALON
+// ACTIVACION ESCALON
 
 __device__ int activacion(float u) {
     if (u > 0.0f)
@@ -62,7 +62,7 @@ __device__ int activacion(float u) {
         return 0;
 }
 
-// 3. CALCULAR ERROR
+// CALCULAR ERROR
 // d = resultado esperado
 // y = salida del perceptron
 // error = d - y
@@ -78,7 +78,7 @@ __global__ void kernelError(const float* u, int etiqueta, int* errores) {
     }
 }
 
-// 4. ACTUALIZAR PESOS DEL PERCEPTRON
+// ACTUALIZAR PESOS DEL PERCEPTRON
 // w = w + lr * error * X
 
 __global__ void kernelActualizarPesos(float* W, const float* X, const int* errores, float tasa) {
@@ -96,7 +96,7 @@ __global__ void kernelActualizarPesos(float* W, const float* X, const int* error
     }
 }
 
-// 5. CREAR Y LIBERAR EL PERCEPTRON
+// CREAR Y LIBERAR EL PERCEPTRON
 
 void liberarPerceptron() {
     cudaFree(W);
@@ -117,23 +117,21 @@ void construirPerceptron() {
     revisar(cudaMemset(W, 0, grupos * entradas * sizeof(float)));
 }
 
-// 6. ENTRENAR UNA IMAGEN
-// AQUI SI SE MODIFICAN LOS PESOS.
-
+// ENTRENAR UNA IMAGEN
 int entrenar(const float* imagenCPU, int etiqueta) {
     revisar(cudaMemcpy(imagenGPU,imagenCPU, entradas * sizeof(float), cudaMemcpyHostToDevice));
 
-    // Paso 1: calcular u.
+    //  calcular u
     kernelForward<<<grupos, 256>>>( W,imagenGPU,salidasGPU);
 
     revisar(cudaGetLastError());
 
-    // Paso 2: aplicar escalon y calcular error.
+    //  aplicar escalon y calcular error
     kernelError<<<1, grupos>>>(salidasGPU,etiqueta,erroresGPU);
 
     revisar(cudaGetLastError());
 
-    // Paso 3: actualizar pesos.
+    //  actualizar pesos
     kernelActualizarPesos<<<(grupos * entradas + 255) / 256, 256 >>>(W,imagenGPU, erroresGPU, lr);
 
     revisar(cudaGetLastError());
@@ -142,9 +140,6 @@ int entrenar(const float* imagenCPU, int etiqueta) {
     int errores[grupos];
 
     revisar(cudaMemcpy(errores, erroresGPU, grupos * sizeof(int), cudaMemcpyDeviceToHost));
-
-    // Igual que Python: contar errores binarios.
-    // Una imagen puede producir mas de un error.
     int cantidad = 0;
 
     for (int d = 0; d < grupos; d++) {
@@ -155,9 +150,9 @@ int entrenar(const float* imagenCPU, int etiqueta) {
     return cantidad;
 }
 
-// 7. PREDECIR UNA IMAGEN
-// AQUI NO SE MODIFICAN LOS PESOS.
-// Se escoge el mayor u, SIN aplicar el escalon.
+// PREDECIR UNA IMAGEN
+// AQUI NO SE MODIFICAN LOS PESOS
+// Se escoge el mayor u, SIN aplicar el escalon
 
 
 int predecir(const float* imagenCPU) {
@@ -172,7 +167,7 @@ int predecir(const float* imagenCPU) {
 
     revisar(cudaMemcpy(u, salidasGPU, grupos * sizeof(float), cudaMemcpyDeviceToHost));
 
-    // Equivalente a np.argmax(salidas).
+    // Equivalente a np.argmax(salidas)
     int mejor = 0;
 
     for (int d = 1; d < grupos; d++) {
@@ -183,9 +178,7 @@ int predecir(const float* imagenCPU) {
     return mejor;
 }
 
-// ============================================================
-// 8. ESTRUCTURA DE UNA IMAGEN
-// ============================================================
+// ESTRUCTURA DE UNA IMAGEN
 
 struct DatoImagen {
     int clase = 0;
@@ -205,9 +198,7 @@ uint32_t leerEntero(ifstream& archivo) {
          | uint32_t(b[3]);
 }
 
-// ============================================================
-// 9. CARGAR IMAGENES Y ETIQUETAS MNIST
-// ============================================================
+// CARGAR IMAGENES Y ETIQUETAS MNIST
 
 void cargarSet(
     const string& rutaImagenes, const string& rutaEtiquetas, vector<DatoImagen>& destino)
@@ -265,7 +256,7 @@ void cargarSet(
     cout << "Cargadas: " << cantidad << " imagenes.\n";
 }
 
-// 10. SEPARACION DE DATOS: ENTRENAMIENTO Y PRUEBA
+// SEPARACION DE DATOS: ENTRENAMIENTO Y PRUEBA
 
 void cargarMNIST(
     vector<DatoImagen>& entrenamiento,
@@ -278,7 +269,7 @@ void cargarMNIST(
     cargarSet(rutaArchivos + "/t10k-images-idx3-ubyte", rutaArchivos + "/t10k-labels-idx1-ubyte", prueba);
 }
 
-// 11. NORMALIZAR PIXELES Y AGREGAR BIAS
+// NORMALIZAR PIXELES Y AGREGAR BIAS
 
 void norma_img(const int* fuente, float* destino) {
     destino[0] = 1.0f; // x0 para el bias
@@ -287,10 +278,8 @@ void norma_img(const int* fuente, float* destino) {
         destino[i + 1] = static_cast<float>(fuente[i] / 255.0);
 }
 
-// 12. EVALUAR: ACCURACY Y ERRORES POR DIGITO
-// NO MODIFICA PESOS.
-
-
+// EVALUAR: ACCURACY Y ERRORES POR DIGITO
+// NO MODIFICA PESOS
 void evaluar(const vector<DatoImagen>& datos, const string& nombre)
 {
     vector<float> buffer(entradas);
@@ -327,13 +316,10 @@ void evaluar(const vector<DatoImagen>& datos, const string& nombre)
     }
 }
 
-// 13. PROGRAMA PRINCIPAL
 
 int main() {
     try {
-        // ----------------------------------------------------
-        // A. CARGAR DATOS SEPARADOS
-        // ----------------------------------------------------
+        // CARGAR DATOS SEPARADOS
 
         vector<DatoImagen> setEntrenamiento;
         vector<DatoImagen> setPrueba;
@@ -349,9 +335,9 @@ int main() {
 
         vector<float> buffer(entradas);
 
-        // B. ENTRENAMIENTO
-        // Solo utiliza setEntrenamiento.
-        // Todas las imagenes, en orden, durante 10 epocas.
+        // ENTRENAMIENTO
+        // Solo utiliza setEntrenamiento
+        // Todas las imagenes durante 10 epocas
 
         cout << "\n========== ENTRENAMIENTO ==========\n";
 
@@ -373,13 +359,13 @@ int main() {
                  << endl;
         }
 
-        // C. EVALUACION FINAL
-        // Ya no se modifican los pesos.
+        // EVALUACION FINAL
+        // Ya no se modifican los pesos
 
         evaluar(setEntrenamiento, "ENTRENAMIENTO");
         evaluar(setPrueba, "PRUEBA");
 
-        // D. MOSTRAR PESOS FINALES
+        // MOSTRAR PESOS FINALES
 
         vector<float> pesos(grupos * entradas);
 
