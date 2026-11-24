@@ -8,6 +8,13 @@
 
 using namespace std;
 
+/*
+Integrantes:
+-PINO CHARUN JULIO EDUARDO
+-ROSAS LIPA GIANELLA ARIANA
+-SALAS RAMOS RODRIGO EMANUEL SANTIAGO
+*/
+
 const int tam_imagen = 784;
 const int entradas = 785; // 784 pixeles + bias
 const int grupos = 10;   // 10 salidas, una por digito
@@ -27,10 +34,6 @@ void revisar(cudaError_t estado) {
     if (estado != cudaSuccess)
         throw runtime_error(cudaGetErrorString(estado));
 }
-
-// PRODUCTO PUNTO DEL PERCEPTRON
-// u = w[0]*X[0] + w[1]*X[1] + ... + w[784]*X[784]
-
 
 __global__ void kernelForward(const float* W, const float* X, float* u) {
     int digito = blockIdx.x;
@@ -53,19 +56,12 @@ __global__ void kernelForward(const float* W, const float* X, float* u) {
     }
 }
 
-// ACTIVACION ESCALON
-
 __device__ int activacion(float u) {
     if (u > 0.0f)
         return 1;
     else
         return 0;
 }
-
-// CALCULAR ERROR
-// d = resultado esperado
-// y = salida del perceptron
-// error = d - y
 
 __global__ void kernelError(const float* u, int etiqueta, int* errores) {
     int digito = threadIdx.x;
@@ -77,9 +73,6 @@ __global__ void kernelError(const float* u, int etiqueta, int* errores) {
         errores[digito] = d - y;
     }
 }
-
-// ACTUALIZAR PESOS DEL PERCEPTRON
-// w = w + lr * error * X
 
 __global__ void kernelActualizarPesos(float* W, const float* X, const int* errores, float tasa) {
 
@@ -96,7 +89,6 @@ __global__ void kernelActualizarPesos(float* W, const float* X, const int* error
     }
 }
 
-// CREAR Y LIBERAR EL PERCEPTRON
 
 void liberarPerceptron() {
     cudaFree(W);
@@ -117,7 +109,6 @@ void construirPerceptron() {
     revisar(cudaMemset(W, 0, grupos * entradas * sizeof(float)));
 }
 
-// ENTRENAR UNA IMAGEN
 int entrenar(const float* imagenCPU, int etiqueta) {
     revisar(cudaMemcpy(imagenGPU,imagenCPU, entradas * sizeof(float), cudaMemcpyHostToDevice));
 
@@ -150,11 +141,6 @@ int entrenar(const float* imagenCPU, int etiqueta) {
     return cantidad;
 }
 
-// PREDECIR UNA IMAGEN
-// AQUI NO SE MODIFICAN LOS PESOS
-// Se escoge el mayor u, SIN aplicar el escalon
-
-
 int predecir(const float* imagenCPU) {
     revisar(cudaMemcpy(imagenGPU, imagenCPU, entradas * sizeof(float), cudaMemcpyHostToDevice));
 
@@ -167,7 +153,6 @@ int predecir(const float* imagenCPU) {
 
     revisar(cudaMemcpy(u, salidasGPU, grupos * sizeof(float), cudaMemcpyDeviceToHost));
 
-    // Equivalente a np.argmax(salidas)
     int mejor = 0;
 
     for (int d = 1; d < grupos; d++) {
@@ -178,27 +163,19 @@ int predecir(const float* imagenCPU) {
     return mejor;
 }
 
-// ESTRUCTURA DE UNA IMAGEN
-
 struct DatoImagen {
     int clase = 0;
     int pixeles[784];
 };
 
-// Leer enteros de las cabeceras IDX.
 uint32_t leerEntero(ifstream& archivo) {
     unsigned char b[4];
 
     if (!archivo.read(reinterpret_cast<char*>(b), 4))
         throw runtime_error("Cabecera IDX incompleta.");
 
-    return (uint32_t(b[0]) << 24)
-         | (uint32_t(b[1]) << 16)
-         | (uint32_t(b[2]) << 8)
-         | uint32_t(b[3]);
+    return (uint32_t(b[0]) << 24)| (uint32_t(b[1]) << 16)| (uint32_t(b[2]) << 8)| uint32_t(b[3]);
 }
-
-// CARGAR IMAGENES Y ETIQUETAS MNIST
 
 void cargarSet(
     const string& rutaImagenes, const string& rutaEtiquetas, vector<DatoImagen>& destino)
@@ -207,10 +184,7 @@ void cargarSet(
     ifstream etiquetas(rutaEtiquetas, ios::binary);
 
     if (!imagenes || !etiquetas) {
-        throw runtime_error(
-            "No se pudieron abrir: " + rutaImagenes
-            + " / " + rutaEtiquetas
-        );
+        throw runtime_error("No se pudieron abrir: " + rutaImagenes + " / " + rutaEtiquetas);
     }
 
     uint32_t magicImagenes = leerEntero(imagenes);
@@ -221,13 +195,7 @@ void cargarSet(
     uint32_t magicEtiquetas = leerEntero(etiquetas);
     uint32_t cantidadEtiquetas = leerEntero(etiquetas);
 
-    if (magicImagenes != 2051 ||
-        magicEtiquetas != 2049 ||
-        filas != 28 ||
-        columnas != 28 ||
-        cantidad == 0 ||
-        cantidad != cantidadEtiquetas ||
-        cantidad > 1000000) {
+    if (magicImagenes != 2051 ||magicEtiquetas != 2049 ||filas != 28 ||columnas != 28 ||cantidad == 0 ||cantidad != cantidadEtiquetas ||cantidad > 1000000) {
         throw runtime_error("Archivos MNIST IDX invalidos.");
     }
 
@@ -237,10 +205,7 @@ void cargarSet(
         unsigned char etiqueta;
         unsigned char pixeles[784];
 
-        if (!etiquetas.read(
-                reinterpret_cast<char*>(&etiqueta), 1) ||
-            !imagenes.read(
-                reinterpret_cast<char*>(pixeles), 784)) {
+        if (!etiquetas.read(reinterpret_cast<char*>(&etiqueta), 1) ||!imagenes.read(reinterpret_cast<char*>(pixeles), 784)) {
             throw runtime_error("Archivo MNIST incompleto.");
         }
 
@@ -256,20 +221,13 @@ void cargarSet(
     cout << "Cargadas: " << cantidad << " imagenes.\n";
 }
 
-// SEPARACION DE DATOS: ENTRENAMIENTO Y PRUEBA
-
 void cargarMNIST(
     vector<DatoImagen>& entrenamiento,
     vector<DatoImagen>& prueba
 ) {
-    // ENTRENAMIENTO: datos para aprender.
     cargarSet(rutaArchivos + "/train-images-idx3-ubyte", rutaArchivos + "/train-labels-idx1-ubyte", entrenamiento);
-
-    // PRUEBA: datos que NO participan en el aprendizaje.
     cargarSet(rutaArchivos + "/t10k-images-idx3-ubyte", rutaArchivos + "/t10k-labels-idx1-ubyte", prueba);
 }
-
-// NORMALIZAR PIXELES Y AGREGAR BIAS
 
 void norma_img(const int* fuente, float* destino) {
     destino[0] = 1.0f; // x0 para el bias
@@ -278,8 +236,6 @@ void norma_img(const int* fuente, float* destino) {
         destino[i + 1] = static_cast<float>(fuente[i] / 255.0);
 }
 
-// EVALUAR: ACCURACY Y ERRORES POR DIGITO
-// NO MODIFICA PESOS
 void evaluar(const vector<DatoImagen>& datos, const string& nombre)
 {
     vector<float> buffer(entradas);
@@ -303,24 +259,18 @@ void evaluar(const vector<DatoImagen>& datos, const string& nombre)
 
     cout << "\nEVALUACION EN " << nombre << '\n';
 
-    cout << "Accuracy: "
-         << double(aciertos) / datos.size()
-         << '\n';
+    cout << "Accuracy: "<< double(aciertos) / datos.size()<< '\n';
 
     cout << "Digito real | Total | Mal clasificados\n";
 
     for (int d = 0; d < grupos; d++) {
-        cout << d << " | "
-             << total[d] << " | "
-             << fallos[d] << '\n';
+        cout << d << " | "<< total[d] << " | "<< fallos[d] << '\n';
     }
 }
 
 
 int main() {
     try {
-        // CARGAR DATOS SEPARADOS
-
         vector<DatoImagen> setEntrenamiento;
         vector<DatoImagen> setPrueba;
 
@@ -335,10 +285,6 @@ int main() {
 
         vector<float> buffer(entradas);
 
-        // ENTRENAMIENTO
-        // Solo utiliza setEntrenamiento
-        // Todas las imagenes durante 10 epocas
-
         cout << "\n========== ENTRENAMIENTO ==========\n";
 
         for (int e = 1; e <= epochs; e++)
@@ -348,24 +294,14 @@ int main() {
             for (const DatoImagen& d : setEntrenamiento) {
                 norma_img(d.pixeles, buffer.data());
 
-                errores += entrenar(
-                    buffer.data(),
-                    d.clase
-                );
+                errores += entrenar(buffer.data(),d.clase);
             }
 
-            cout << "Epoca " << e
-                 << ": errores = " << errores
-                 << endl;
+            cout << "Epoca " << e<< ": errores = " << errores<< endl;
         }
-
-        // EVALUACION FINAL
-        // Ya no se modifican los pesos
 
         evaluar(setEntrenamiento, "ENTRENAMIENTO");
         evaluar(setPrueba, "PRUEBA");
-
-        // MOSTRAR PESOS FINALES
 
         vector<float> pesos(grupos * entradas);
 
